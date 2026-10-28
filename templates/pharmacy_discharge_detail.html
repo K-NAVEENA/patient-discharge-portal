@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Pharmacy Protocol - {{ admission.patient.full_name }}{% endblock %}
+{% block page_title %}Pharmacy Medication Reconciliation & Discharge Clearance{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <div>
+            <h3>{{ admission.patient.full_name }} ({{ admission.patient.patient_id }})</h3>
+            <span style="font-size: 13px; color: var(--text-muted);">
+                Admission: <strong>{{ admission.admission_number }}</strong> • Room {{ admission.room.room_number }} • Attending: Dr. {{ admission.admitting_doctor.full_name }}
+            </span>
+        </div>
+        <a href="{{ url_for('pharmacy.dashboard') }}" class="btn btn-outline btn-sm">
+            &larr; Back to Pharmacy Queue
+        </a>
+    </div>
+    <div class="card-body">
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px;">
+            <strong style="color: var(--primary-dark); font-size: 13px;">Physician Medication Orders & Discharge Regimen:</strong>
+            <p style="margin-top: 4px; font-size: 14px;">{{ coordination.clinical_notes or 'No notes recorded.' }}</p>
+            {% if coordination.follow_up_instructions %}
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
+                <strong>Patient Regimen / Instructions:</strong> {{ coordination.follow_up_instructions }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div style="display: flex; gap: 24px; flex-wrap: wrap;">
+    <!-- Left: Pharmacy Tasks & Medication Billing -->
+    <div style="flex: 3; min-width: 480px;">
+        <!-- Pharmacy Tasks -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-prescription-bottle-medical"></i> Pharmacy Protocols</h3>
+                {% if coordination.pharmacy_cleared %}
+                    <span class="badge badge-completed"><i class="fa-solid fa-check"></i> Pharmacy Cleared</span>
+                {% else %}
+                    <span class="badge badge-pending">Dispensing Incomplete</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% for t in tasks %}
+                <div style="background: #fafbfc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                        <div>
+                            <h4 style="font-size: 15px; font-weight: 600;">{{ t.title }}</h4>
+                            <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">{{ t.description }}</p>
+                        </div>
+                        <span class="badge {% if t.status == 'Completed' %}badge-completed{% elif t.status == 'Blocked' %}badge-blocked{% elif t.status == 'In Progress' %}badge-info{% else %}badge-pending{% endif %}">
+                            {{ t.status }}
+                        </span>
+                    </div>
+
+                    <!-- Update Task Form -->
+                    <form method="POST" action="{{ url_for('pharmacy.update_task', task_id=t.id) }}" style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-top: 10px;">
+                        <div class="form-row">
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label class="form-label" style="font-size: 12px;">Protocol Status</label>
+                                <select name="status" class="form-select task-status-select" style="font-size: 13px;" required>
+                                    <option value="Pending" {% if t.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                    <option value="In Progress" {% if t.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="Completed" {% if t.status == 'Completed' %}selected{% endif %}>Completed (Dispensed)</option>
+                                    <option value="Blocked" {% if t.status == 'Blocked' %}selected{% endif %}>Blocked (Alert / Clarification)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label class="form-label" style="font-size: 12px;">Pharmacist Remarks</label>
+                                <input type="text" name="remarks" value="{{ t.remarks or '' }}" class="form-control" style="font-size: 13px;" placeholder="e.g. 30-day course labeled and counseling completed">
+                            </div>
+                        </div>
+
+                        <div class="form-group blocked-reason-group" style="margin-bottom: 10px; display: {% if t.status == 'Blocked' %}block{% else %}none{% endif %};">
+                            <label class="form-label" style="font-size: 12px; color: var(--status-blocked);">Mandatory Reason for Blocked Status *</label>
+                            <textarea name="blocked_reason" class="form-control" rows="2" style="font-size: 13px;" placeholder="Detail reason (e.g. Drug allergy conflict with penicillin, clarification needed on insulin dose)">{{ t.blocked_reason or '' }}</textarea>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fa-solid fa-save"></i> Save Pharmacy Status
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Add Medication Billing Item Form -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-file-invoice-dollar"></i> Add Discharge Medication to Billing</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('pharmacy.add_medication_charge', admission_id=admission.id) }}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="med_name">Medication Name & Dosage *</label>
+                            <input type="text" id="med_name" name="med_name" class="form-control" placeholder="e.g. Furosemide 40mg (30 tabs)" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="unit_price">Unit Price ($) *</label>
+                            <input type="number" step="0.01" id="unit_price" name="unit_price" class="form-control" placeholder="45.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="quantity">Quantity</label>
+                            <input type="number" step="1" id="quantity" name="quantity" class="form-control" value="1" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-outline btn-sm">
+                        <i class="fa-solid fa-plus"></i> Add Charge to Patient Bill
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Interdepartmental Communication -->
+    <div style="flex: 2; min-width: 320px;">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-comments"></i> Clinical Messaging</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('communication.send_message') }}" style="margin-bottom: 16px;">
+                    <input type="hidden" name="admission_id" value="{{ admission.id }}">
+                    <input type="hidden" name="redirect_url" value="{{ request.url }}">
+                    
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <select name="target_department" class="form-select" style="font-size: 12px;">
+                            <option value="Doctor">Attending Physician (Doctor)</option>
+                            <option value="Nursing">Nursing Staff</option>
+                            <option value="All Staff">All Clinical Staff</option>
+                            <option value="Admin">Administration</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <textarea name="message" class="form-control" rows="2" placeholder="Send medication note or dosage query..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-outline btn-sm" style="width: 100%;">
+                        <i class="fa-solid fa-paper-plane"></i> Post Message
+                    </button>
+                </form>
+
+                <div class="comm-list">
+                    {% for c in communications %}
+                    <div class="comm-item {% if c.log_type == 'alert' %}alert-comm{% elif c.log_type == 'clearance' %}clearance-comm{% endif %}">
+                        <div class="comm-header">
+                            <div>
+                                <span class="comm-sender">{{ c.sender.full_name if c.sender else 'System' }}</span>
+                                <span class="comm-dept-badge">{{ c.source_department }} &rarr; {{ c.target_department }}</span>
+                            </div>
+                            <span class="comm-time">{{ c.created_at.strftime('%m/%d %H:%M') }}</span>
+                        </div>
+                        <div class="comm-msg">{{ c.message }}</div>
+                    </div>
+                    {% else %}
+                    <p style="text-align: center; color: var(--text-light); font-size: 13px; padding: 12px;">
+                        No messages recorded.
+                    </p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

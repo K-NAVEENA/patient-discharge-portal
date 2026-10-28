@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Registration - Patient Discharge Coordination Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-card auth-card-wide">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <i class="fa-solid fa-user-doctor"></i>
+                </div>
+                <h2 class="auth-title">Staff Account Registration</h2>
+                <p class="auth-subtitle">For clinical physicians, nursing personnel, pharmacy, and laboratory teams</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="alert alert-info" style="font-size: 13px;">
+                <i class="fa-solid fa-circle-info"></i> Note: For security and compliance, all staff registrations require administrator approval before portal access is granted.
+            </div>
+
+            <form method="POST" action="{{ url_for('auth.register') }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="full_name">Full Name *</label>
+                        <input type="text" id="full_name" name="full_name" class="form-control" placeholder="e.g. Dr. Arthur Conan" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="username">Username *</label>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="e.g. dr_arthur" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="email">Institutional Email *</label>
+                        <input type="email" id="email" name="email" class="form-control" placeholder="arthur@hospital.local" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Phone Number</label>
+                        <input type="text" id="phone" name="phone" class="form-control" placeholder="e.g. 555-0123">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="role">Requested Role *</label>
+                        <select id="role" name="role" class="form-select" required>
+                            <option value="">-- Select Clinical Role --</option>
+                            <option value="doctor">Physician / Doctor</option>
+                            <option value="nurse">Registered Nurse</option>
+                            <option value="pharmacy">Pharmacist / Pharmacy Specialist</option>
+                            <option value="laboratory">Laboratory Technologist / Pathologist</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="department">Department / Specialty</label>
+                        <input type="text" id="department" name="department" class="form-control" placeholder="e.g. Cardiology, Inpatient Ward A, Pharmacy">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="employee_id">Employee / Staff ID</label>
+                        <input type="text" id="employee_id" name="employee_id" class="form-control" placeholder="e.g. DOC-9921">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="qualification">Qualifications / License</label>
+                        <input type="text" id="qualification" name="qualification" class="form-control" placeholder="e.g. MD, BSN, PharmD">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password *</label>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="Minimum 6 characters" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="confirm_password">Confirm Password *</label>
+                        <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Confirm password" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 14px;">
+                    <i class="fa-solid fa-user-check"></i> Submit Registration for Approval
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-muted);">
+                Already registered? <a href="{{ url_for('auth.login') }}">Back to Login</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

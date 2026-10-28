@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Physician Dashboard - CareDischarge{% endblock %}
+{% block page_title %}Doctor Clinical Care & Discharge Overview{% endblock %}
+
+{% block content %}
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">My Assigned Inpatients</span>
+            <div class="metric-icon" style="background: var(--bg-primary-soft); color: var(--primary);">
+                <i class="fa-solid fa-hospital-user"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ active_admissions|length }}</div>
+        <div class="metric-subtext">Under active attending care</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">In Discharge Workflow</span>
+            <div class="metric-icon" style="background: var(--status-pending-bg); color: var(--status-pending);">
+                <i class="fa-solid fa-arrows-turn-to-dots"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ discharge_patients|length }}</div>
+        <div class="metric-subtext">Clinical decision dispatched</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Ready for Final Discharge</span>
+            <div class="metric-icon" style="background: var(--status-completed-bg); color: var(--status-completed);">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ ready_count }}</div>
+        <div class="metric-subtext">Awaiting administrative checkout</div>
+    </div>
+</div>
+
+<!-- Assigned Patients Table -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-bed"></i> Inpatients Under Your Care ({{ active_admissions|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if active_admissions %}
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Patient ID</th>
+                        <th>Patient Name</th>
+                        <th>Room</th>
+                        <th>Admitted Date</th>
+                        <th>Stay Length</th>
+                        <th>Primary Nurse</th>
+                        <th>Discharge Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for adm in active_admissions %}
+                    <tr>
+                        <td><strong>{{ adm.patient.patient_id }}</strong></td>
+                        <td>
+                            <strong>{{ adm.patient.full_name }}</strong>
+                            <div style="font-size: 11px; color: var(--text-muted);">{{ adm.patient.gender }}, {{ adm.patient.age }} yrs</div>
+                        </td>
+                        <td>Room {{ adm.room.room_number }} ({{ adm.room.ward }})</td>
+                        <td>{{ adm.admission_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ adm.length_of_stay_days }} d</td>
+                        <td>{{ adm.assigned_nurse.full_name }}</td>
+                        <td>
+                            <span class="badge {% if adm.status == 'Ready for Final Discharge' %}badge-completed{% elif adm.status == 'Admitted' %}badge-info{% else %}badge-pending{% endif %}">
+                                {{ adm.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('doctor.patient_detail', admission_id=adm.id) }}" class="btn btn-primary btn-sm">
+                                <i class="fa-solid fa-stethoscope"></i> Clinical Assessment &rarr;
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 36px; text-align: center; color: var(--text-muted);">
+            <i class="fa-solid fa-check-circle" style="font-size: 32px; color: var(--status-completed); margin-bottom: 8px;"></i>
+            <p>No active inpatients currently assigned to your roster.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Past Discharged Patients -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-clock-rotate-left"></i> Recently Discharged Patients Treated By You</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if past_discharged %}
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Patient Name</th>
+                        <th>Admission #</th>
+                        <th>Admitted Date</th>
+                        <th>Discharged Date</th>
+                        <th>Discharge Summary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in past_discharged %}
+                    <tr>
+                        <td><strong>{{ p.patient.full_name }}</strong></td>
+                        <td>{{ p.admission_number }}</td>
+                        <td>{{ p.admission_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ p.discharge_date.strftime('%Y-%m-%d %H:%M') if p.discharge_date else 'N/A' }}</td>
+                        <td style="font-size: 13px; color: var(--text-muted); max-width: 320px;">
+                            {{ p.discharge_summary or 'No archived summary' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 24px; text-align: center; color: var(--text-muted);">
+            <p>No historical discharge records found under your supervision.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

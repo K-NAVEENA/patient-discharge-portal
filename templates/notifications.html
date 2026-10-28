@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications - CareDischarge{% endblock %}
+{% block page_title %}System Alerts & Clinical Notifications{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-bell"></i> Your Notifications</h3>
+        {% if notifications %}
+        <form method="POST" action="{{ url_for('notifications.mark_all_read') }}">
+            <button type="submit" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-check-double"></i> Mark All as Read
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if notifications %}
+            <div style="display: flex; flex-direction: column;">
+                {% for n in notifications %}
+                <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; background-color: {% if not n.is_read %}#f0fdf4{% else %}white{% endif %};">
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
+                        <div style="margin-top: 2px;">
+                            {% if n.event_type == 'task_blocked' %}
+                                <i class="fa-solid fa-circle-exclamation" style="color: var(--status-blocked); font-size: 18px;"></i>
+                            {% elif n.event_type == 'ready_for_discharge' or n.event_type == 'discharge_finalized' %}
+                                <i class="fa-solid fa-circle-check" style="color: var(--status-completed); font-size: 18px;"></i>
+                            {% elif n.event_type == 'task_created' or n.event_type == 'patient_assigned' %}
+                                <i class="fa-solid fa-circle-info" style="color: var(--primary); font-size: 18px;"></i>
+                            {% else %}
+                                <i class="fa-regular fa-bell" style="color: var(--text-muted); font-size: 18px;"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <strong style="font-size: 14px; color: var(--text-main);">{{ n.title }}</strong>
+                                {% if not n.is_read %}
+                                    <span class="badge badge-info" style="font-size: 10px; padding: 1px 6px;">New</span>
+                                {% endif %}
+                            </div>
+                            <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px; line-height: 1.4;">
+                                {{ n.message }}
+                            </p>
+                            <span style="font-size: 11px; color: var(--text-light); margin-top: 4px; display: block;">
+                                {{ n.created_at.strftime('%Y-%m-%d %H:%M') }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        {% if n.link_url %}
+                        <a href="{{ n.link_url }}" class="btn btn-outline btn-sm" style="font-size: 12px;">
+                            View Details &rarr;
+                        </a>
+                        {% endif %}
+                        {% if not n.is_read %}
+                        <form method="POST" action="{{ url_for('notifications.mark_read', notif_id=n.id) }}">
+                            <input type="hidden" name="redirect_url" value="{{ request.url }}">
+                            <button type="submit" class="btn btn-sm btn-outline" title="Mark as read">
+                                <i class="fa-solid fa-check"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+        <div style="padding: 48px; text-align: center; color: var(--text-muted);">
+            <i class="fa-regular fa-bell-slash" style="font-size: 36px; color: var(--text-light); margin-bottom: 12px;"></i>
+            <p>You have no notifications at this time.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

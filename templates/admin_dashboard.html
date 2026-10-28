@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Hospital Administration Dashboard - CareDischarge{% endblock %}
+{% block page_title %}Hospital Administration & Coordination Center{% endblock %}
+
+{% block content %}
+<!-- Metrics Grid -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Admitted Patients</span>
+            <div class="metric-icon" style="background: var(--bg-primary-soft); color: var(--primary);">
+                <i class="fa-solid fa-bed"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ total_admitted }}</div>
+        <div class="metric-subtext">Active inpatients</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Discharge In Progress</span>
+            <div class="metric-icon" style="background: var(--status-pending-bg); color: var(--status-pending);">
+                <i class="fa-solid fa-spinner"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ undergoing_discharge }}</div>
+        <div class="metric-subtext">{{ awaiting_clearance }} awaiting dept clearances</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Ready for Final Discharge</span>
+            <div class="metric-icon" style="background: var(--status-completed-bg); color: var(--status-completed);">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ ready_for_discharge }}</div>
+        <div class="metric-subtext">All clearances complete</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Total Discharged</span>
+            <div class="metric-icon" style="background: var(--bg-subtle); color: var(--text-muted);">
+                <i class="fa-solid fa-user-check"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ total_discharged }}</div>
+        <div class="metric-subtext">Archived in history</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Staff Approvals</span>
+            <div class="metric-icon" style="background: var(--status-info-bg); color: var(--status-info);">
+                <i class="fa-solid fa-user-clock"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ pending_staff }}</div>
+        <div class="metric-subtext"><a href="{{ url_for('admin.staff') }}">Review registrations &rarr;</a></div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Room Occupancy</span>
+            <div class="metric-icon" style="background: var(--bg-primary-soft); color: var(--primary-dark);">
+                <i class="fa-solid fa-door-open"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ occupied_rooms }} / {{ total_rooms }}</div>
+        <div class="metric-subtext">{{ occupancy_pct }}% capacity utilization</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Outstanding Billing</span>
+            <div class="metric-icon" style="background: var(--status-pending-bg); color: var(--status-pending);">
+                <i class="fa-solid fa-receipt"></i>
+            </div>
+        </div>
+        <div class="metric-value">${{ "%.2f"|format(total_outstanding) }}</div>
+        <div class="metric-subtext">Active accounts ledger</div>
+    </div>
+</div>
+
+<!-- Quick Action Strip -->
+<div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+    <a href="{{ url_for('admin.admit_patient') }}" class="btn btn-primary">
+        <i class="fa-solid fa-user-plus"></i> Admit New Patient
+    </a>
+    <a href="{{ url_for('admin.patients_list') }}" class="btn btn-outline">
+        <i class="fa-solid fa-magnifying-glass"></i> Search Patients & History
+    </a>
+    <a href="{{ url_for('admin.rooms') }}" class="btn btn-outline">
+        <i class="fa-solid fa-door-open"></i> View & Allocate Rooms
+    </a>
+    <a href="{{ url_for('admin.staff') }}" class="btn btn-outline">
+        <i class="fa-solid fa-id-card"></i> Manage Staff ({{ pending_staff }} Pending)
+    </a>
+</div>
+
+<!-- Discharge Coordination Queue -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-arrows-split-up-and-left"></i> Active Discharge Coordination Pipeline</h3>
+        <span class="badge badge-info">{{ discharge_queue|length }} in workflow</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if discharge_queue %}
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Admission Ref</th>
+                        <th>Patient Name</th>
+                        <th>Room</th>
+                        <th>Physician</th>
+                        <th>Status</th>
+                        <th>Department Clearances</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for adm in discharge_queue %}
+                    <tr>
+                        <td><strong>{{ adm.admission_number }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('admin.view_patient', patient_id=adm.patient.id) }}">
+                                {{ adm.patient.full_name }}
+                            </a>
+                            <div style="font-size: 11px; color: var(--text-muted);">{{ adm.patient.patient_id }}</div>
+                        </td>
+                        <td>{{ adm.room.room_number }} <span style="font-size: 11px; color: var(--text-muted);">({{ adm.room.ward }})</span></td>
+                        <td>{{ adm.admitting_doctor.full_name }}</td>
+                        <td>
+                            {% if adm.status == 'Ready for Final Discharge' %}
+                                <span class="badge badge-completed"><i class="fa-solid fa-circle-check"></i> Ready for Final Discharge</span>
+                            {% elif adm.status == 'Awaiting Departmental Clearance' %}
+                                <span class="badge badge-pending"><i class="fa-solid fa-clock"></i> Awaiting Clearances</span>
+                            {% else %}
+                                <span class="badge badge-info">{{ adm.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set dc = adm.discharge_coordination %}
+                            {% if dc %}
+                                <div style="display: flex; gap: 6px; font-size: 11px;">
+                                    <span class="badge {% if dc.nursing_cleared %}badge-completed{% else %}badge-pending{% endif %}">
+                                        NUR: {% if dc.nursing_cleared %}Done{% else %}Pending{% endif %}
+                                    </span>
+                                    <span class="badge {% if dc.pharmacy_cleared %}badge-completed{% else %}badge-pending{% endif %}">
+                                        PHM: {% if dc.pharmacy_cleared %}Done{% else %}Pending{% endif %}
+                                    </span>
+                                    {% if dc.requires_laboratory %}
+                                    <span class="badge {% if dc.laboratory_cleared %}badge-completed{% else %}badge-pending{% endif %}">
+                                        LAB: {% if dc.laboratory_cleared %}Done{% else %}Pending{% endif %}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <span style="color: var(--text-light); font-size: 12px;">Not initiated</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin.discharge_details', admission_id=adm.id) }}" class="btn btn-outline btn-sm">
+                                Review & Finalize &rarr;
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 28px; text-align: center; color: var(--text-muted);">
+            <i class="fa-solid fa-check-circle" style="font-size: 32px; color: var(--status-completed); margin-bottom: 8px;"></i>
+            <p>No patients currently in the discharge pipeline.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Inpatient Admissions -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-hospital"></i> Current Inpatients</h3>
+        <a href="{{ url_for('admin.patients_list') }}" class="btn btn-outline btn-sm">View All Inpatients &rarr;</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if active_admissions %}
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Patient ID</th>
+                        <th>Full Name</th>
+                        <th>Admitted Date</th>
+                        <th>Stay (Days)</th>
+                        <th>Room</th>
+                        <th>Doctor</th>
+                        <th>Nurse</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for adm in active_admissions %}
+                    <tr>
+                        <td><strong>{{ adm.patient.patient_id }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('admin.view_patient', patient_id=adm.patient.id) }}">
+                                {{ adm.patient.full_name }}
+                            </a>
+                        </td>
+                        <td>{{ adm.admission_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ adm.length_of_stay_days }} d</td>
+                        <td>{{ adm.room.room_number }}</td>
+                        <td>{{ adm.admitting_doctor.full_name }}</td>
+                        <td>{{ adm.assigned_nurse.full_name }}</td>
+                        <td>
+                            <span class="badge {% if adm.status == 'Admitted' %}badge-info{% elif adm.status == 'Ready for Final Discharge' %}badge-completed{% else %}badge-pending{% endif %}">
+                                {{ adm.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin.view_patient', patient_id=adm.patient.id) }}" class="btn btn-outline btn-sm" title="View Patient Details">
+                                <i class="fa-solid fa-eye"></i> Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 28px; text-align: center; color: var(--text-muted);">
+            <p>No active inpatients currently admitted.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

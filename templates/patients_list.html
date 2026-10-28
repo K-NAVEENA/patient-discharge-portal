@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Directory & Admissions - CareDischarge{% endblock %}
+{% block page_title %}Patient Directory & Admission Records{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 20px;">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('admin.patients_list') }}" style="display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;">
+            <div style="flex: 2; min-width: 220px;">
+                <label class="form-label" style="font-size: 12px;">Search Keyword</label>
+                <input type="text" name="q" value="{{ query_str or '' }}" class="form-control" placeholder="Patient ID, Name, Room, or Admission #">
+            </div>
+
+            <div style="flex: 1; min-width: 160px;">
+                <label class="form-label" style="font-size: 12px;">Admission Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="Admitted" {% if status_filter == 'Admitted' %}selected{% endif %}>Admitted</option>
+                    <option value="Discharge In Progress" {% if status_filter == 'Discharge In Progress' %}selected{% endif %}>Discharge In Progress</option>
+                    <option value="Awaiting Departmental Clearance" {% if status_filter == 'Awaiting Departmental Clearance' %}selected{% endif %}>Awaiting Departmental Clearance</option>
+                    <option value="Ready for Final Discharge" {% if status_filter == 'Ready for Final Discharge' %}selected{% endif %}>Ready for Final Discharge</option>
+                    <option value="Discharged" {% if status_filter == 'Discharged' %}selected{% endif %}>Discharged</option>
+                </select>
+            </div>
+
+            <div style="flex: 1; min-width: 140px;">
+                <label class="form-label" style="font-size: 12px;">From Date</label>
+                <input type="date" name="from_date" value="{{ from_date or '' }}" class="form-control">
+            </div>
+
+            <div style="flex: 1; min-width: 140px;">
+                <label class="form-label" style="font-size: 12px;">To Date</label>
+                <input type="date" name="to_date" value="{{ to_date or '' }}" class="form-control">
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-filter"></i> Apply Filter
+                </button>
+                <a href="{{ url_for('admin.patients_list') }}" class="btn btn-outline" title="Clear Filters">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Matching Patient Admissions ({{ admissions|length }})</h3>
+        <a href="{{ url_for('admin.admit_patient') }}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-user-plus"></i> Admit Patient
+        </a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if admissions %}
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Admission #</th>
+                        <th>Patient ID</th>
+                        <th>Patient Name</th>
+                        <th>Room</th>
+                        <th>Admission Date</th>
+                        <th>Discharge Date</th>
+                        <th>Attending Doctor</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for adm in admissions %}
+                    <tr>
+                        <td><strong>{{ adm.admission_number }}</strong></td>
+                        <td>{{ adm.patient.patient_id }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.view_patient', patient_id=adm.patient.id) }}">
+                                {{ adm.patient.full_name }}
+                            </a>
+                        </td>
+                        <td>Room {{ adm.room.room_number }}</td>
+                        <td>{{ adm.admission_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if adm.discharge_date %}
+                                {{ adm.discharge_date.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 12px;">Current Inpatient</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ adm.admitting_doctor.full_name }}</td>
+                        <td>
+                            <span class="badge {% if adm.status == 'Discharged' %}badge-neutral{% elif adm.status == 'Ready for Final Discharge' %}badge-completed{% elif adm.status == 'Admitted' %}badge-info{% else %}badge-pending{% endif %}">
+                                {{ adm.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 6px;">
+                                <a href="{{ url_for('admin.view_patient', patient_id=adm.patient.id) }}" class="btn btn-outline btn-sm" title="View Patient Profile">
+                                    <i class="fa-solid fa-user"></i>
+                                </a>
+                                {% if adm.status != 'Discharged' %}
+                                    <a href="{{ url_for('admin.discharge_details', admission_id=adm.id) }}" class="btn btn-outline btn-sm" title="Discharge Coordination">
+                                        <i class="fa-solid fa-arrows-turn-to-dots"></i>
+                                    </a>
+                                {% endif %}
+                                <a href="{{ url_for('billing.account_detail', admission_id=adm.id) }}" class="btn btn-outline btn-sm" title="Billing Ledger">
+                                    <i class="fa-solid fa-receipt"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 32px; text-align: center; color: var(--text-muted);">
+            <p>No patient admission records found matching the specified search criteria.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

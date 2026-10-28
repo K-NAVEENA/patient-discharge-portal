@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}My Health Portal - CareDischarge{% endblock %}
+{% block page_title %}Patient Stay & Discharge Information{% endblock %}
+
+{% block content %}
+{% if patient %}
+<!-- Welcome & Identity Card -->
+<div class="card" style="margin-bottom: 24px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-color: #bae6fd;">
+    <div class="card-body" style="padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="width: 54px; height: 54px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700;">
+                    {{ patient.full_name[:2].upper() }}
+                </div>
+                <div>
+                    <h2 style="font-size: 20px; font-weight: 700; color: var(--primary-dark);">Welcome, {{ patient.full_name }}</h2>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
+                        Patient ID: <strong>{{ patient.patient_id }}</strong> • DOB: {{ patient.date_of_birth.strftime('%B %d, %Y') }}
+                    </p>
+                </div>
+            </div>
+
+            {% if current_admission %}
+            <div>
+                <span style="font-size: 12px; color: var(--text-muted); display: block; text-align: right;">Current Status</span>
+                <span class="badge {% if current_admission.status == 'Ready for Final Discharge' %}badge-completed{% elif current_admission.status == 'Admitted' %}badge-info{% else %}badge-pending{% endif %}" style="font-size: 14px; padding: 6px 14px;">
+                    {{ current_admission.status }}
+                </span>
+            </div>
+            {% else %}
+            <div>
+                <span class="badge badge-neutral" style="font-size: 13px; padding: 6px 12px;">No Active Admission</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if current_admission %}
+<!-- Active Discharge Journey Stepper -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-route"></i> Your Discharge Progress Timeline</h3>
+        <span style="font-size: 13px; color: var(--text-muted);">
+            Room {{ current_admission.room.room_number }} ({{ current_admission.room.ward }}) • Admitted {{ current_admission.admission_date.strftime('%B %d, %Y at %H:%M') }}
+        </span>
+    </div>
+    <div class="card-body">
+        <div class="stepper-container">
+            <div class="stepper-line"></div>
+            
+            <!-- Step 1: Admitted -->
+            <div class="stepper-step completed">
+                <div class="step-circle"><i class="fa-solid fa-check"></i></div>
+                <div class="step-label">Admitted to Care</div>
+            </div>
+
+            <!-- Step 2: Physician Assessment -->
+            <div class="stepper-step {% if coordination and coordination.clinical_readiness_approved %}completed{% else %}active{% endif %}">
+                <div class="step-circle">{% if coordination and coordination.clinical_readiness_approved %}<i class="fa-solid fa-check"></i>{% else %}2{% endif %}</div>
+                <div class="step-label">Doctor Discharge Decision</div>
+            </div>
+
+            <!-- Step 3: Clearances -->
+            <div class="stepper-step {% if coordination and coordination.is_ready_for_discharge %}completed{% elif coordination and coordination.clinical_readiness_approved %}active{% endif %}">
+                <div class="step-circle">{% if coordination and coordination.is_ready_for_discharge %}<i class="fa-solid fa-check"></i>{% else %}3{% endif %}</div>
+                <div class="step-label">Department Clearances</div>
+            </div>
+
+            <!-- Step 4: Ready for Final Discharge -->
+            <div class="stepper-step {% if current_admission.status == 'Discharged' %}completed{% elif coordination and coordination.is_ready_for_discharge %}active{% endif %}">
+                <div class="step-circle">{% if current_admission.status == 'Discharged' %}<i class="fa-solid fa-check"></i>{% else %}4{% endif %}</div>
+                <div class="step-label">Final Hospital Discharge</div>
+            </div>
+        </div>
+
+        <!-- Clearance Summary Table -->
+        <div style="margin-top: 16px; background: #fafbfc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 18px;">
+            <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px;">
+                Departmental Clearance Verification Status
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
+                <div style="background: white; border: 1px solid var(--border-color); padding: 12px; border-radius: var(--radius-sm);">
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Physician Assessment</div>
+                    <div style="margin-top: 6px;">
+                        {% if coordination and coordination.clinical_readiness_approved %}
+                            <span class="badge badge-completed"><i class="fa-solid fa-check"></i> Approved</span>
+                        {% else %}
+                            <span class="badge badge-pending">Under Observation</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div style="background: white; border: 1px solid var(--border-color); padding: 12px; border-radius: var(--radius-sm);">
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Nursing Care Sign-Off</div>
+                    <div style="margin-top: 6px;">
+                        {% if coordination and coordination.nursing_cleared %}
+                            <span class="badge badge-completed"><i class="fa-solid fa-check"></i> Complete</span>
+                        {% else %}
+                            <span class="badge badge-pending">In Progress</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div style="background: white; border: 1px solid var(--border-color); padding: 12px; border-radius: var(--radius-sm);">
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Pharmacy Dispensation</div>
+                    <div style="margin-top: 6px;">
+                        {% if coordination and coordination.pharmacy_cleared %}
+                            <span class="badge badge-completed"><i class="fa-solid fa-check"></i> Ready</span>
+                        {% else %}
+                            <span class="badge badge-pending">Packaging Meds</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if coordination and coordination.requires_laboratory %}
+                <div style="background: white; border: 1px solid var(--border-color); padding: 12px; border-radius: var(--radius-sm);">
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Laboratory Results</div>
+                    <div style="margin-top: 6px;">
+                        {% if coordination.laboratory_cleared %}
+                            <span class="badge badge-completed"><i class="fa-solid fa-check"></i> Finalized</span>
+                        {% else %}
+                            <span class="badge badge-pending">Pending Results</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Care Instructions & Follow-Up -->
+{% if coordination and coordination.follow_up_instructions %}
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-clipboard-prescription"></i> Your Discharge Care & Follow-Up Instructions</h3>
+    </div>
+    <div class="card-body">
+        <p style="font-size: 15px; line-height: 1.6; color: var(--text-main); background: #f8fafc; padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            {{ coordination.follow_up_instructions }}
+        </p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Itemized Billing Statement -->
+{% if billing_account %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-receipt"></i> Your Hospital Billing Statement</h3>
+        <span class="badge {% if billing_account.balance_due <= 0.01 %}badge-completed{% else %}badge-pending{% endif %}">
+            {{ billing_account.payment_status }}
+        </span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Charge Category</th>
+                        <th>Description</th>
+                        <th>Unit Rate</th>
+                        <th>Qty</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in billing_account.items %}
+                    <tr>
+                        <td><span class="badge badge-info">{{ item.category }}</span></td>
+                        <td>{{ item.description }}</td>
+                        <td>${{ "%.2f"|format(item.unit_price) }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td><strong>${{ "%.2f"|format(item.total_price) }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr style="background-color: #fafbfc;">
+                        <td colspan="4" style="text-align: right; font-weight: 600;">Subtotal Hospital Charges:</td>
+                        <td style="font-weight: 700;">${{ "%.2f"|format(billing_account.subtotal_amount) }}</td>
+                    </tr>
+                    {% if billing_account.discount_amount > 0 %}
+                    <tr style="background-color: #fafbfc;">
+                        <td colspan="4" style="text-align: right; font-weight: 600; color: var(--status-completed);">Hospital Adjustments / Discount:</td>
+                        <td style="font-weight: 700; color: var(--status-completed);">- ${{ "%.2f"|format(billing_account.discount_amount) }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr style="background-color: #fafbfc;">
+                        <td colspan="4" style="text-align: right; font-weight: 600;">Total Net Charges:</td>
+                        <td style="font-weight: 700;">${{ "%.2f"|format(billing_account.total_amount) }}</td>
+                    </tr>
+                    <tr style="background-color: #fafbfc;">
+                        <td colspan="4" style="text-align: right; font-weight: 600; color: var(--status-completed);">Payments / Insurance Received:</td>
+                        <td style="font-weight: 700; color: var(--status-completed);">${{ "%.2f"|format(billing_account.paid_amount) }}</td>
+                    </tr>
+                    <tr style="background-color: #f1f5f9; font-size: 15px;">
+                        <td colspan="4" style="text-align: right; font-weight: 700; color: var(--text-main);">Current Balance Due:</td>
+                        <td style="font-weight: 800; color: {% if billing_account.balance_due > 0 %}var(--status-pending){% else %}var(--status-completed){% endif %};">
+                            ${{ "%.2f"|format(billing_account.balance_due) }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endif %}
+
+<!-- Past Hospital Stays -->
+{% if past_admissions %}
+<div class="card" style="margin-top: 24px;">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-clock-rotate-left"></i> Previous Hospital Discharges</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Admission Ref</th>
+                        <th>Stay Dates</th>
+                        <th>Room Stayed</th>
+                        <th>Discharge Summary</th>
+                        <th>Billing Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in past_admissions %}
+                    <tr>
+                        <td><strong>{{ p.admission_number }}</strong></td>
+                        <td>{{ p.admission_date.strftime('%Y-%m-%d') }} to {{ p.discharge_date.strftime('%Y-%m-%d') if p.discharge_date else 'N/A' }}</td>
+                        <td>Room {{ p.room.room_number }} ({{ p.room.ward }})</td>
+                        <td style="font-size: 13px; max-width: 320px;">{{ p.discharge_summary or 'Completed and discharged.' }}</td>
+                        <td>
+                            {% if p.billing_account %}
+                                ${{ "%.2f"|format(p.billing_account.total_amount) }} ({{ p.billing_account.payment_status }})
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card">
+    <div class="card-body" style="padding: 36px; text-align: center; color: var(--text-muted);">
+        <p>No patient clinical record is associated with this login account.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

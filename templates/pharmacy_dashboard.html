@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Pharmacy Clearance - CareDischarge{% endblock %}
+{% block page_title %}Pharmacy Medication Reconciliation & Dispensing Queue{% endblock %}
+
+{% block content %}
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Patients in Queue</span>
+            <div class="metric-icon" style="background: var(--bg-primary-soft); color: var(--primary);">
+                <i class="fa-solid fa-hospital-user"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ admissions_queue|length }}</div>
+        <div class="metric-subtext">Requiring pharmacy clearance</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Pending Tasks</span>
+            <div class="metric-icon" style="background: var(--status-pending-bg); color: var(--status-pending);">
+                <i class="fa-solid fa-prescription-bottle"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ pending_count }}</div>
+        <div class="metric-subtext">Reconciliation / dispensing</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Completed Tasks</span>
+            <div class="metric-icon" style="background: var(--status-completed-bg); color: var(--status-completed);">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ completed_count }}</div>
+        <div class="metric-subtext">Medication signed off</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Blocked Tasks</span>
+            <div class="metric-icon" style="background: var(--status-blocked-bg); color: var(--status-blocked);">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+        </div>
+        <div class="metric-value">{{ blocked_count }}</div>
+        <div class="metric-subtext">Prescription / allergy alerts</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-pills"></i> Discharge Pharmacy Worklist</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if tasks %}
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Task Code</th>
+                        <th>Patient Name</th>
+                        <th>Room</th>
+                        <th>Attending Doctor</th>
+                        <th>Prescription Task</th>
+                        <th>Status</th>
+                        <th>Remarks / Blocked Reason</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tasks %}
+                    <tr>
+                        <td><strong>{{ t.task_code }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('pharmacy.discharge_tasks', admission_id=t.admission.id) }}">
+                                {{ t.admission.patient.full_name }}
+                            </a>
+                            <div style="font-size: 11px; color: var(--text-muted);">{{ t.admission.patient.patient_id }}</div>
+                        </td>
+                        <td>Room {{ t.admission.room.room_number }}</td>
+                        <td>{{ t.admission.admitting_doctor.full_name }}</td>
+                        <td>
+                            <strong>{{ t.title }}</strong>
+                            <div style="font-size: 12px; color: var(--text-muted);">{{ t.description }}</div>
+                        </td>
+                        <td>
+                            {% if t.status == 'Completed' %}
+                                <span class="badge badge-completed"><i class="fa-solid fa-check"></i> Completed</span>
+                            {% elif t.status == 'Blocked' %}
+                                <span class="badge badge-blocked"><i class="fa-solid fa-ban"></i> Blocked</span>
+                            {% elif t.status == 'In Progress' %}
+                                <span class="badge badge-info"><i class="fa-solid fa-spinner"></i> In Progress</span>
+                            {% else %}
+                                <span class="badge badge-pending"><i class="fa-solid fa-clock"></i> Pending</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 13px;">
+                            {% if t.status == 'Blocked' %}
+                                <span style="color: var(--status-blocked); font-weight: 600;">Reason: {{ t.blocked_reason }}</span>
+                            {% else %}
+                                {{ t.remarks or '--' }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('pharmacy.discharge_tasks', admission_id=t.admission.id) }}" class="btn btn-primary btn-sm">
+                                Review & Dispense &rarr;
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 32px; text-align: center; color: var(--text-muted);">
+            <i class="fa-solid fa-circle-check" style="font-size: 32px; color: var(--status-completed); margin-bottom: 8px;"></i>
+            <p>No active pharmacy discharge tasks in the queue.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

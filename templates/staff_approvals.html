@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Management & Approvals - CareDischarge{% endblock %}
+{% block page_title %}Healthcare Staff Verification & Approvals{% endblock %}
+
+{% block content %}
+<!-- Pending Registration Requests -->
+<div class="card">
+    <div class="card-header" style="background-color: var(--status-pending-bg);">
+        <h3 style="color: #78350f;">
+            <i class="fa-solid fa-user-clock"></i> Pending Staff Registrations ({{ pending_staff|length }})
+        </h3>
+        <span style="font-size: 13px; color: #78350f;">Requires administrative verification prior to portal clearance</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if pending_staff %}
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Username</th>
+                        <th>Role Requested</th>
+                        <th>Department</th>
+                        <th>Employee ID</th>
+                        <th>Qualifications</th>
+                        <th>Institutional Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in pending_staff %}
+                    <tr>
+                        <td><strong>{{ s.full_name }}</strong></td>
+                        <td>{{ s.username }}</td>
+                        <td>
+                            <span class="badge badge-info">{{ s.role.title() }}</span>
+                        </td>
+                        <td>{{ s.department or 'N/A' }}</td>
+                        <td>{{ s.employee_id or 'N/A' }}</td>
+                        <td>{{ s.qualification or 'N/A' }}</td>
+                        <td>{{ s.email }}</td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <form method="POST" action="{{ url_for('admin.approve_staff', user_id=s.id) }}">
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fa-solid fa-check"></i> Approve
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin.reject_staff', user_id=s.id) }}">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Reject this staff registration request?');">
+                                        <i class="fa-solid fa-xmark"></i> Reject
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 32px; text-align: center; color: var(--text-muted);">
+            <i class="fa-solid fa-circle-check" style="font-size: 28px; color: var(--status-completed); margin-bottom: 8px;"></i>
+            <p>No staff registrations pending approval. All applications are up to date.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Active Staff Directory -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-users"></i> Authorized Staff Accounts ({{ approved_staff|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Staff Name</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Employee ID</th>
+                        <th>Email / Contact</th>
+                        <th>Status</th>
+                        <th>Account Access</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in approved_staff %}
+                    <tr>
+                        <td><strong>{{ s.full_name }}</strong></td>
+                        <td>{{ s.username }}</td>
+                        <td>
+                            <span class="badge badge-neutral">{{ s.role.title() }}</span>
+                        </td>
+                        <td>{{ s.department or 'N/A' }}</td>
+                        <td>{{ s.employee_id or 'N/A' }}</td>
+                        <td>{{ s.email }}</td>
+                        <td>
+                            {% if s.is_active %}
+                                <span class="badge badge-completed">Active</span>
+                            {% else %}
+                                <span class="badge badge-blocked">Deactivated</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin.toggle_staff_status', user_id=s.id) }}">
+                                {% if s.is_active %}
+                                    <button type="submit" class="btn btn-outline btn-sm" style="color: var(--status-blocked); border-color: #fca5a5;">
+                                        <i class="fa-solid fa-ban"></i> Deactivate
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-outline btn-sm" style="color: var(--status-completed); border-color: #86efac;">
+                                        <i class="fa-solid fa-rotate-left"></i> Re-activate
+                                    </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

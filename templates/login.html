@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - CareFlow Patient Discharge Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Scoped styles specifically for CareFlow Clean Login Page */
+        body.careflow-login-body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #0f172a;
+        }
+
+        /* White Top Navigation Header */
+        .login-topbar {
+            height: 70px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        }
+
+        .login-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .login-brand-logo {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 18px;
+            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.25);
+        }
+
+        .login-brand-text {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #0b1728;
+            display: flex;
+            align-items: center;
+        }
+
+        .login-brand-text span {
+            color: #0284c7;
+            font-weight: 800;
+        }
+
+        .login-portal-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #475569;
+            background-color: #f1f5f9;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+        }
+
+        .login-portal-badge i {
+            color: #0284c7;
+        }
+
+        /* Main Container with White/Light Background */
+        .login-main-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 20px;
+            background-color: #f8fafc;
+        }
+
+        /* Clean Elevated Login Card */
+        .careflow-login-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 440px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+            padding: 40px 36px;
+            box-sizing: border-box;
+        }
+
+        .login-card-header {
+            margin-bottom: 28px;
+            text-align: left;
+        }
+
+        .login-card-header .login-heading {
+            font-size: 26px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.02em;
+        }
+
+        .login-card-header .login-subheading {
+            font-size: 14px;
+            color: #64748b;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Form Groups & Inputs */
+        .login-form-group {
+            margin-bottom: 20px;
+        }
+
+        .login-form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .login-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .login-input-wrapper i {
+            position: absolute;
+            left: 14px;
+            color: #94a3b8;
+            font-size: 15px;
+            pointer-events: none;
+            transition: color 0.15s ease;
+        }
+
+        .login-input-control {
+            width: 100%;
+            height: 48px;
+            padding: 10px 14px 10px 42px;
+            font-size: 14px;
+            color: #0f172a;
+            background-color: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        .login-input-control:focus {
+            outline: none;
+            border-color: #0284c7;
+            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.12);
+        }
+
+        .login-input-control:focus + i,
+        .login-input-wrapper:focus-within i {
+            color: #0284c7;
+        }
+
+        /* Blue Accent Button */
+        .login-submit-btn {
+            width: 100%;
+            height: 48px;
+            margin-top: 8px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .login-submit-btn:hover {
+            background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(2, 132, 199, 0.38);
+        }
+
+        .login-submit-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Registration Link & Footer */
+        .login-footer-links {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .login-footer-links a {
+            color: #0284c7;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.15s ease;
+        }
+
+        .login-footer-links a:hover {
+            color: #0369a1;
+            text-decoration: underline;
+        }
+
+        /* Alerts */
+        .login-alert {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            line-height: 1.4;
+        }
+
+        .login-alert-danger {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .login-alert-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .login-alert-success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .login-alert-info {
+            background-color: #e0f2fe;
+            color: #075985;
+            border: 1px solid #bae6fd;
+        }
+
+        @media (max-width: 640px) {
+            .login-topbar {
+                padding: 0 20px;
+                height: 62px;
+            }
+            .login-portal-badge {
+                display: none;
+            }
+            .careflow-login-card {
+                padding: 30px 22px;
+                border-radius: 14px;
+            }
+        }
+    </style>
+</head>
+<body class="careflow-login-body">
+
+    <!-- Top White Header Area with CareFlow branding -->
+    <header class="login-topbar">
+        <a href="{{ url_for('auth.welcome') }}" class="login-brand">
+            <div class="login-brand-logo">
+                <i class="fa-solid fa-notes-medical"></i>
+            </div>
+            <div class="login-brand-text">Care<span>Flow</span></div>
+        </a>
+        <div class="login-portal-badge">
+            <i class="fa-solid fa-hospital-user"></i>
+            <span>Patient Discharge Portal</span>
+        </div>
+    </header>
+
+    <!-- Main Section with White/Light Background -->
+    <main class="login-main-container">
+        <div class="careflow-login-card">
+            <!-- Header -->
+            <div class="login-card-header">
+                <h1 class="login-heading">Login</h1>
+                <p class="login-subheading">Enter your credentials to access your portal account</p>
+            </div>
+
+            <!-- Existing Error / Validation Alerts -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="login-alert login-alert-{{ category }}">
+                            <i class="fa-solid {% if category == 'danger' %}fa-circle-exclamation{% elif category == 'success' %}fa-circle-check{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Form: Preserves exact method, action, field names, and validation -->
+            <form method="POST" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
+                <div class="login-form-group">
+                    <label class="login-form-label" for="login_id">Username or Email</label>
+                    <div class="login-input-wrapper">
+                        <input type="text" id="login_id" name="login_id" class="login-input-control" placeholder="Enter username or email" required autofocus>
+                        <i class="fa-regular fa-user"></i>
+                    </div>
+                </div>
+
+                <div class="login-form-group">
+                    <label class="login-form-label" for="password">Password</label>
+                    <div class="login-input-wrapper">
+                        <input type="password" id="password" name="password" class="login-input-control" placeholder="Enter password" required>
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                </div>
+
+                <button type="submit" class="login-submit-btn">
+                    <span>Login</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <!-- Registration Link -->
+            <div class="login-footer-links">
+                Healthcare professional? <a href="{{ url_for('auth.register') }}">Register for Staff Access</a>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Discharge Coordination - {{ admission.patient.full_name }}{% endblock %}
+{% block page_title %}Discharge Coordination & Clearance Review{% endblock %}
+
+{% block content %}
+<!-- Top Header Card -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--bg-primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;">
+                {{ admission.patient.full_name[:2].upper() }}
+            </div>
+            <div>
+                <h3>{{ admission.patient.full_name }} ({{ admission.patient.patient_id }})</h3>
+                <span style="font-size: 13px; color: var(--text-muted);">
+                    Admission: <strong>{{ admission.admission_number }}</strong> • Room {{ admission.room.room_number }} ({{ admission.room.ward }}) • Attending: Dr. {{ admission.admitting_doctor.full_name }}
+                </span>
+            </div>
+        </div>
+        <div>
+            {% if admission.status == 'Discharged' %}
+                <span class="badge badge-neutral" style="font-size: 14px; padding: 6px 14px;">
+                    <i class="fa-solid fa-check-double"></i> Final Discharge Completed
+                </span>
+            {% elif readiness and readiness.is_ready %}
+                <span class="badge badge-completed" style="font-size: 14px; padding: 6px 14px;">
+                    <i class="fa-solid fa-circle-check"></i> Ready for Final Discharge
+                </span>
+            {% else %}
+                <span class="badge badge-pending" style="font-size: 14px; padding: 6px 14px;">
+                    <i class="fa-solid fa-hourglass-half"></i> {{ admission.status }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Visual Stepper -->
+        <div class="stepper-container">
+            <div class="stepper-line"></div>
+            
+            <div class="stepper-step {% if coordination and coordination.clinical_readiness_approved %}completed{% else %}active{% endif %}">
+                <div class="step-circle">1</div>
+                <div class="step-label">Physician Assessment</div>
+            </div>
+
+            <div class="stepper-step {% if coordination and coordination.nursing_cleared %}completed{% elif coordination and coordination.requires_nursing %}active{% endif %}">
+                <div class="step-circle">2</div>
+                <div class="step-label">Nursing Clearance</div>
+            </div>
+
+            <div class="stepper-step {% if coordination and coordination.pharmacy_cleared %}completed{% elif coordination and coordination.requires_pharmacy %}active{% endif %}">
+                <div class="step-circle">3</div>
+                <div class="step-label">Pharmacy Dispensing</div>
+            </div>
+
+            {% if coordination and coordination.requires_laboratory %}
+            <div class="stepper-step {% if coordination.laboratory_cleared %}completed{% else %}active{% endif %}">
+                <div class="step-circle">4</div>
+                <div class="step-label">Lab Sign-Off</div>
+            </div>
+            {% endif %}
+
+            <div class="stepper-step {% if admission.status == 'Discharged' %}completed{% elif readiness and readiness.is_ready %}active{% endif %}">
+                <div class="step-circle">{% if coordination and coordination.requires_laboratory %}5{% else %}4{% endif %}</div>
+                <div class="step-label">Final Administrative Discharge</div>
+            </div>
+        </div>
+
+        {% if coordination %}
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px; margin-top: 10px;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--primary-dark); margin-bottom: 4px;">
+                <i class="fa-solid fa-user-doctor"></i> Physician Discharge Order:
+            </div>
+            <p style="font-size: 14px; margin-bottom: 8px;">{{ coordination.clinical_notes or 'No clinical notes recorded.' }}</p>
+            {% if coordination.follow_up_instructions %}
+            <div style="font-size: 12px; color: var(--text-muted);">
+                <strong>Follow-up Instructions:</strong> {{ coordination.follow_up_instructions }}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div style="display: flex; gap: 24px; flex-wrap: wrap;">
+    <!-- Left Column: Department Tasks & Final Execution -->
+    <div style="flex: 3; min-width: 480px;">
+        <!-- Departmental Tasks Checklist -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-list-check"></i> Required Department Clearances & Tasks</h3>
+            </div>
+            <div class="card-body" style="padding: 0;">
+                {% if tasks %}
+                <div class="table-responsive">
+                    <table class="app-table">
+                        <thead>
+                            <tr>
+                                <th>Department</th>
+                                <th>Task Description</th>
+                                <th>Status</th>
+                                <th>Handled By</th>
+                                <th>Remarks / Blocked Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in tasks %}
+                            <tr>
+                                <td>
+                                    <span class="badge badge-info">{{ t.department }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ t.title }}</strong>
+                                    <div style="font-size: 12px; color: var(--text-muted);">{{ t.description }}</div>
+                                </td>
+                                <td>
+                                    {% if t.status == 'Completed' %}
+                                        <span class="badge badge-completed"><i class="fa-solid fa-check"></i> Completed</span>
+                                    {% elif t.status == 'Blocked' %}
+                                        <span class="badge badge-blocked"><i class="fa-solid fa-ban"></i> Blocked</span>
+                                    {% elif t.status == 'In Progress' %}
+                                        <span class="badge badge-info"><i class="fa-solid fa-spinner"></i> In Progress</span>
+                                    {% else %}
+                                        <span class="badge badge-pending"><i class="fa-solid fa-clock"></i> Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if t.completed_by %}
+                                        {{ t.completed_by.full_name }}
+                                        <div style="font-size: 11px; color: var(--text-light);">{{ t.completed_at.strftime('%m/%d %H:%M') }}</div>
+                                    {% else %}
+                                        <span style="color: var(--text-light); font-size: 12px;">--</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if t.status == 'Blocked' %}
+                                        <strong style="color: var(--status-blocked);">Reason:</strong> {{ t.blocked_reason }}
+                                    {% else %}
+                                        {{ t.remarks or '--' }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div style="padding: 24px; text-align: center; color: var(--text-muted);">
+                    <p>No departmental discharge tasks generated yet. Doctor must initiate discharge first.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Final Discharge Action Box -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-file-signature"></i> Final Administrative Discharge Execution</h3>
+            </div>
+            <div class="card-body">
+                {% if admission.status == 'Discharged' %}
+                    <div class="alert alert-success">
+                        <i class="fa-solid fa-circle-check"></i> <strong>Discharge Finalized:</strong> 
+                        This admission was completed on {{ admission.discharge_date.strftime('%Y-%m-%d %H:%M') }} by {{ admission.discharged_by.full_name if admission.discharged_by else 'Administrator' }}. Room has been returned to inventory.
+                    </div>
+                    {% if admission.discharge_summary %}
+                    <div style="margin-top: 14px;">
+                        <label class="form-label">Archived Discharge Summary</label>
+                        <p style="background: #fafbfc; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 14px;">
+                            {{ admission.discharge_summary }}
+                        </p>
+                    </div>
+                    {% endif %}
+                {% elif readiness and readiness.is_ready %}
+                    <div class="alert alert-success">
+                        <i class="fa-solid fa-circle-check"></i> <strong>All Required Department Clearances Satisfied!</strong>
+                        The patient is clinically ready and all clinical/departmental clearance tasks are completed.
+                    </div>
+
+                    <form method="POST" action="{{ url_for('admin.finalize_discharge', admission_id=admission.id) }}" class="confirm-final-discharge-form">
+                        <div class="form-group">
+                            <label class="form-label" for="discharge_summary">Final Discharge Summary / Departure Notes</label>
+                            <textarea id="discharge_summary" name="discharge_summary" class="form-control" rows="3" placeholder="Discharge condition, disposition (home/rehab), transport arrangements...">{{ coordination.clinical_notes }}</textarea>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600;">
+                                <input type="checkbox" name="release_room" checked>
+                                <span>Release Room {{ admission.room.room_number }} to available inventory immediately</span>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-success" style="font-size: 15px; padding: 12px 24px;">
+                            <i class="fa-solid fa-check-double"></i> Confirm & Finalize Patient Discharge
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fa-solid fa-triangle-exclamation"></i> <strong>Cannot Finalize Discharge Yet:</strong>
+                        Departmental clearances remain pending or blocked. The system will prevent finalization until all required tasks are completed.
+                    </div>
+                    {% if readiness and readiness.blocked_tasks %}
+                    <div style="margin-top: 10px; padding: 12px; background: #fff5f5; border: 1px solid #fecaca; border-radius: var(--radius-sm);">
+                        <strong style="color: var(--status-blocked);">Blocked Tasks Requiring Resolution:</strong>
+                        <ul style="margin-left: 20px; margin-top: 6px; font-size: 13px; color: #991b1b;">
+                            {% for bt in readiness.blocked_tasks %}
+                            <li><strong>{{ bt.department }}:</strong> {{ bt.title }} — Reason: {{ bt.blocked_reason }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Financial Clearance & Communication -->
+    <div style="flex: 2; min-width: 320px;">
+        <!-- Billing / Financial Clearance Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-receipt"></i> Financial Clearance</h3>
+                <a href="{{ url_for('billing.account_detail', admission_id=admission.id) }}" class="btn btn-outline btn-sm">Full Ledger &rarr;</a>
+            </div>
+            <div class="card-body">
+                {% if billing_account %}
+                <table class="app-table" style="font-size: 13px;">
+                    <tr>
+                        <td style="color: var(--text-muted);">Stay Duration:</td>
+                        <td style="font-weight: 600;">{{ admission.length_of_stay_days }} day(s)</td>
+                    </tr>
+                    <tr>
+                        <td style="color: var(--text-muted);">Room Charges:</td>
+                        <td>${{ "%.2f"|format(billing_account.total_room_charges) }}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: var(--text-muted);">Total Charges:</td>
+                        <td style="font-weight: 700;">${{ "%.2f"|format(billing_account.total_amount) }}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: var(--text-muted);">Paid to Date:</td>
+                        <td style="color: var(--status-completed); font-weight: 600;">${{ "%.2f"|format(billing_account.paid_amount) }}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: var(--text-muted); font-size: 14px;"><strong>Outstanding Balance:</strong></td>
+                        <td style="font-size: 16px; font-weight: 700; color: {% if billing_account.balance_due > 0 %}var(--status-pending){% else %}var(--status-completed){% endif %};">
+                            ${{ "%.2f"|format(billing_account.balance_due) }}
+                        </td>
+                    </tr>
+                </table>
+                <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Financial Status:</span>
+                    <span class="badge {% if billing_account.balance_due <= 0.01 %}badge-completed{% else %}badge-pending{% endif %}">
+                        {{ billing_account.payment_status }}
+                    </span>
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+                    * Financial clearance is tracked distinct from clinical clearance in accordance with hospital policy.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Interdepartmental Communication Log -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-comments"></i> Communication Logs</h3>
+            </div>
+            <div class="card-body">
+                <!-- Send Message Form -->
+                <form method="POST" action="{{ url_for('communication.send_message') }}" style="margin-bottom: 16px;">
+                    <input type="hidden" name="admission_id" value="{{ admission.id }}">
+                    <input type="hidden" name="redirect_url" value="{{ request.url }}">
+                    
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <select name="target_department" class="form-select" style="font-size: 12px;">
+                            <option value="All Staff">Broadcast to All Staff</option>
+                            <option value="Doctor">Attending Physician (Doctor)</option>
+                            <option value="Nursing">Nursing Staff</option>
+                            <option value="Pharmacy">Pharmacy Staff</option>
+                            <option value="Laboratory">Laboratory Staff</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <textarea name="message" class="form-control" rows="2" placeholder="Post auditable communication log..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-outline btn-sm" style="width: 100%;">
+                        <i class="fa-solid fa-paper-plane"></i> Post Interdepartmental Note
+                    </button>
+                </form>
+
+                <!-- Communication Stream -->
+                <div class="comm-list">
+                    {% for c in communications %}
+                    <div class="comm-item {% if c.log_type == 'alert' %}alert-comm{% elif c.log_type == 'clearance' %}clearance-comm{% endif %}">
+                        <div class="comm-header">
+                            <div>
+                                <span class="comm-sender">{{ c.sender.full_name if c.sender else 'System' }}</span>
+                                <span class="comm-dept-badge">{{ c.source_department }} &rarr; {{ c.target_department }}</span>
+                            </div>
+                            <span class="comm-time">{{ c.created_at.strftime('%m/%d %H:%M') }}</span>
+                        </div>
+                        <div class="comm-msg">{{ c.message }}</div>
+                    </div>
+                    {% else %}
+                    <p style="text-align: center; color: var(--text-light); font-size: 13px; padding: 12px;">
+                        No communication entries recorded yet.
+                    </p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

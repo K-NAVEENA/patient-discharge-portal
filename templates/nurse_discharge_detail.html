@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Nursing Checklist - {{ admission.patient.full_name }}{% endblock %}
+{% block page_title %}Nursing Care Discharge Checklist & Documentation{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <div>
+            <h3>{{ admission.patient.full_name }} ({{ admission.patient.patient_id }})</h3>
+            <span style="font-size: 13px; color: var(--text-muted);">
+                Admission: <strong>{{ admission.admission_number }}</strong> • Room {{ admission.room.room_number }} • Physician: Dr. {{ admission.admitting_doctor.full_name }}
+            </span>
+        </div>
+        <a href="{{ url_for('nurse.dashboard') }}" class="btn btn-outline btn-sm">
+            &larr; Back to Ward Tasks
+        </a>
+    </div>
+    <div class="card-body">
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px;">
+            <strong style="color: var(--primary-dark); font-size: 13px;">Physician Discharge Orders & Instructions:</strong>
+            <p style="margin-top: 4px; font-size: 14px;">{{ coordination.clinical_notes or 'No notes recorded.' }}</p>
+            {% if coordination.follow_up_instructions %}
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
+                <strong>Follow-Up:</strong> {{ coordination.follow_up_instructions }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div style="display: flex; gap: 24px; flex-wrap: wrap;">
+    <!-- Left: Nursing Tasks Checklist Forms -->
+    <div style="flex: 3; min-width: 480px;">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-clipboard-check"></i> Assigned Nursing Discharge Protocols</h3>
+                {% if coordination.nursing_cleared %}
+                    <span class="badge badge-completed"><i class="fa-solid fa-check"></i> Nursing Cleared</span>
+                {% else %}
+                    <span class="badge badge-pending">Clearance Incomplete</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if tasks %}
+                    {% for t in tasks %}
+                    <div style="background: #fafbfc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 18px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                            <div>
+                                <h4 style="font-size: 15px; font-weight: 600;">{{ t.title }}</h4>
+                                <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">{{ t.description }}</p>
+                            </div>
+                            <span class="badge {% if t.status == 'Completed' %}badge-completed{% elif t.status == 'Blocked' %}badge-blocked{% elif t.status == 'In Progress' %}badge-info{% else %}badge-pending{% endif %}">
+                                {{ t.status }}
+                            </span>
+                        </div>
+
+                        <!-- Update Task Form -->
+                        <form method="POST" action="{{ url_for('nurse.update_task', task_id=t.id) }}" style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-top: 10px;">
+                            <div class="form-row">
+                                <div class="form-group" style="margin-bottom: 10px;">
+                                    <label class="form-label" style="font-size: 12px;">Protocol Status</label>
+                                    <select name="status" class="form-select task-status-select" style="font-size: 13px;" required>
+                                        <option value="Pending" {% if t.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                        <option value="In Progress" {% if t.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                        <option value="Completed" {% if t.status == 'Completed' %}selected{% endif %}>Completed</option>
+                                        <option value="Blocked" {% if t.status == 'Blocked' %}selected{% endif %}>Blocked (Requires Attention)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 10px;">
+                                    <label class="form-label" style="font-size: 12px;">Clinical Observations / Remarks</label>
+                                    <input type="text" name="remarks" value="{{ t.remarks or '' }}" class="form-control" style="font-size: 13px;" placeholder="e.g. Vitals recorded, IV cannula safely removed">
+                                </div>
+                            </div>
+
+                            <div class="form-group blocked-reason-group" style="margin-bottom: 10px; display: {% if t.status == 'Blocked' %}block{% else %}none{% endif %};">
+                                <label class="form-label" style="font-size: 12px; color: var(--status-blocked);">Mandatory Reason for Blocked Status *</label>
+                                <textarea name="blocked_reason" class="form-control" rows="2" style="font-size: 13px;" placeholder="Detail reason for block (e.g. Fever spike 38.5°C, patient vomiting, awaiting transportation)">{{ t.blocked_reason or '' }}</textarea>
+                            </div>
+
+                            <div style="display: flex; justify-content: flex-end;">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fa-solid fa-save"></i> Save Task Status
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="text-align: center; color: var(--text-muted); padding: 24px;">No nursing tasks linked to this admission.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Interdepartmental Communication -->
+    <div style="flex: 2; min-width: 320px;">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-comments"></i> Interdepartmental Notes</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('communication.send_message') }}" style="margin-bottom: 16px;">
+                    <input type="hidden" name="admission_id" value="{{ admission.id }}">
+                    <input type="hidden" name="redirect_url" value="{{ request.url }}">
+                    
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <select name="target_department" class="form-select" style="font-size: 12px;">
+                            <option value="All Staff">All Clinical Staff</option>
+                            <option value="Doctor">Attending Doctor</option>
+                            <option value="Pharmacy">Pharmacy</option>
+                            <option value="Laboratory">Laboratory</option>
+                            <option value="Admin">Administration</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <textarea name="message" class="form-control" rows="2" placeholder="Send nursing note or request..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-outline btn-sm" style="width: 100%;">
+                        <i class="fa-solid fa-paper-plane"></i> Post Note
+                    </button>
+                </form>
+
+                <div class="comm-list">
+                    {% for c in communications %}
+                    <div class="comm-item {% if c.log_type == 'alert' %}alert-comm{% elif c.log_type == 'clearance' %}clearance-comm{% endif %}">
+                        <div class="comm-header">
+                            <div>
+                                <span class="comm-sender">{{ c.sender.full_name if c.sender else 'System' }}</span>
+                                <span class="comm-dept-badge">{{ c.source_department }} &rarr; {{ c.target_department }}</span>
+                            </div>
+                            <span class="comm-time">{{ c.created_at.strftime('%m/%d %H:%M') }}</span>
+                        </div>
+                        <div class="comm-msg">{{ c.message }}</div>
+                    </div>
+                    {% else %}
+                    <p style="text-align: center; color: var(--text-light); font-size: 13px; padding: 12px;">
+                        No messages recorded yet.
+                    </p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

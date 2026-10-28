@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Admission - CareDischarge{% endblock %}
+{% block page_title %}New Inpatient Admission & Room Allocation{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 900px; margin: 0 auto;">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-hospital-user"></i> Inpatient Admission Registration</h3>
+        <span style="font-size: 13px; color: var(--text-muted);">A unique Patient ID & Admission Number will be generated automatically</span>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.admit_patient') }}">
+            <h4 style="font-size: 14px; text-transform: uppercase; color: var(--primary); letter-spacing: 0.05em; margin-bottom: 16px;">
+                1. Patient Demographics
+            </h4>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="full_name">Patient Full Name *</label>
+                    <input type="text" id="full_name" name="full_name" class="form-control" placeholder="e.g. Robert J. Sterling" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="date_of_birth">Date of Birth *</label>
+                    <input type="date" id="date_of_birth" name="date_of_birth" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="gender">Gender *</label>
+                    <select id="gender" name="gender" class="form-select" required>
+                        <option value="">-- Select Gender --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="blood_group">Blood Group</label>
+                    <select id="blood_group" name="blood_group" class="form-select">
+                        <option value="">Unknown / Pending</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="phone">Contact Phone *</label>
+                    <input type="tel" id="phone" name="phone" class="form-control" placeholder="555-0199" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="patient@example.com">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="address">Residential Address</label>
+                <textarea id="address" name="address" class="form-control" rows="2" placeholder="Street address, city, state"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="emergency_contact_name">Emergency Contact Name</label>
+                    <input type="text" id="emergency_contact_name" name="emergency_contact_name" class="form-control" placeholder="e.g. Mary Sterling (Spouse)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="emergency_contact_phone">Emergency Contact Phone</label>
+                    <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" class="form-control" placeholder="555-0188">
+                </div>
+            </div>
+
+            <hr style="margin: 24px 0; border: none; border-top: 1px solid var(--border-color);">
+
+            <h4 style="font-size: 14px; text-transform: uppercase; color: var(--primary); letter-spacing: 0.05em; margin-bottom: 16px;">
+                2. Clinical Assignment & Room Allocation
+            </h4>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="room_id">Select Available Room *</label>
+                    <select id="room_id" name="room_id" class="form-select" required>
+                        <option value="">-- Choose Unoccupied Room --</option>
+                        {% for r in available_rooms %}
+                        <option value="{{ r.id }}">
+                            Room {{ r.room_number }} ({{ r.ward }} - {{ r.room_type }}, ${{ "%.0f"|format(r.daily_rate) }}/day)
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if not available_rooms %}
+                    <small style="color: var(--status-blocked);">No rooms currently available! Please add a room first.</small>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="doctor_id">Attending Physician *</label>
+                    <select id="doctor_id" name="doctor_id" class="form-select" required>
+                        <option value="">-- Assign Doctor --</option>
+                        {% for d in doctors %}
+                        <option value="{{ d.id }}">{{ d.full_name }} ({{ d.department }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="nurse_id">Assigned Primary Nurse *</label>
+                    <select id="nurse_id" name="nurse_id" class="form-select" required>
+                        <option value="">-- Assign Nurse --</option>
+                        {% for n in nurses %}
+                        <option value="{{ n.id }}">{{ n.full_name }} ({{ n.department }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="admission_reason">Clinical Reason for Admission *</label>
+                <textarea id="admission_reason" name="admission_reason" class="form-control" rows="2" placeholder="Presenting symptoms, initial clinical triage..." required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="admission_remarks">Admission Remarks / Special Care Needs</label>
+                <input type="text" id="admission_remarks" name="admission_remarks" class="form-control" placeholder="Allergies, dietary requirements, mobility assistance...">
+            </div>
+
+            <hr style="margin: 24px 0; border: none; border-top: 1px solid var(--border-color);">
+
+            <h4 style="font-size: 14px; text-transform: uppercase; color: var(--primary); letter-spacing: 0.05em; margin-bottom: 16px;">
+                3. Patient Portal Account (Optional)
+            </h4>
+
+            <div style="background: #f8fafc; padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600;">
+                    <input type="checkbox" name="create_portal_account" checked>
+                    <span>Activate Patient Portal Access Account</span>
+                </label>
+                <p style="font-size: 12px; color: var(--text-muted); margin: 6px 0 12px 24px;">
+                    Allows the patient to securely log in, review discharge clearance progress, and view itemized bills.
+                </p>
+                <div class="form-group" style="max-width: 320px; margin-left: 24px;">
+                    <label class="form-label" for="temp_password">Temporary Portal Password</label>
+                    <input type="text" id="temp_password" name="temp_password" class="form-control" value="Hospital@123">
+                    <small style="color: var(--text-muted); font-size: 11px;">Patient will be prompted to change password on first login.</small>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary" {% if not available_rooms %}disabled{% endif %}>
+                    <i class="fa-solid fa-bed-pulse"></i> Complete Admission & Allocate Room
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

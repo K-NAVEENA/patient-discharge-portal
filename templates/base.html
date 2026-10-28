@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Patient Discharge Portal{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        {% if current_user %}
+        <aside class="app-sidebar">
+            <div class="sidebar-header">
+                <a href="{{ url_for('auth.role_dashboard') }}" class="brand">
+                    <div class="brand-icon"><i class="fa-solid fa-hospital-user"></i></div>
+                    <span>CareDischarge</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">Main Portal</div>
+                <a href="{{ url_for('auth.role_dashboard') }}" class="nav-item {% if request.endpoint and 'dashboard' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                {% if current_user.role == 'admin' %}
+                    <div class="nav-section-title">Administration</div>
+                    <a href="{{ url_for('admin.patients_list') }}" class="nav-item {% if request.endpoint and 'patient' in request.endpoint and 'admit' not in request.endpoint %}active{% endif %}">
+                        <i class="fa-solid fa-users"></i>
+                        <span>All Patients</span>
+                    </a>
+                    <a href="{{ url_for('admin.admit_patient') }}" class="nav-item {% if request.endpoint == 'admin.admit_patient' %}active{% endif %}">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Admit Patient</span>
+                    </a>
+                    <a href="{{ url_for('admin.rooms') }}" class="nav-item {% if request.endpoint == 'admin.rooms' %}active{% endif %}">
+                        <i class="fa-solid fa-door-open"></i>
+                        <span>Room Management</span>
+                    </a>
+                    <a href="{{ url_for('admin.staff') }}" class="nav-item {% if request.endpoint == 'admin.staff' %}active{% endif %}">
+                        <i class="fa-solid fa-id-badge"></i>
+                        <span>Staff Approvals</span>
+                    </a>
+                {% elif current_user.role == 'doctor' %}
+                    <div class="nav-section-title">Clinical Care</div>
+                    <a href="{{ url_for('doctor.dashboard') }}" class="nav-item {% if request.endpoint == 'doctor.dashboard' %}active{% endif %}">
+                        <i class="fa-solid fa-stethoscope"></i>
+                        <span>Assigned Inpatients</span>
+                    </a>
+                {% elif current_user.role == 'nurse' %}
+                    <div class="nav-section-title">Ward Care</div>
+                    <a href="{{ url_for('nurse.dashboard') }}" class="nav-item {% if request.endpoint == 'nurse.dashboard' %}active{% endif %}">
+                        <i class="fa-solid fa-user-nurse"></i>
+                        <span>Ward Patients & Tasks</span>
+                    </a>
+                {% elif current_user.role == 'pharmacy' %}
+                    <div class="nav-section-title">Pharmacy</div>
+                    <a href="{{ url_for('pharmacy.dashboard') }}" class="nav-item {% if request.endpoint == 'pharmacy.dashboard' %}active{% endif %}">
+                        <i class="fa-solid fa-prescription-bottle-medical"></i>
+                        <span>Prescription Queue</span>
+                    </a>
+                {% elif current_user.role == 'laboratory' %}
+                    <div class="nav-section-title">Diagnostics</div>
+                    <a href="{{ url_for('laboratory.dashboard') }}" class="nav-item {% if request.endpoint == 'laboratory.dashboard' %}active{% endif %}">
+                        <i class="fa-solid fa-flask-vial"></i>
+                        <span>Lab Clearance Queue</span>
+                    </a>
+                {% elif current_user.role == 'patient' %}
+                    <div class="nav-section-title">My Health</div>
+                    <a href="{{ url_for('patient.dashboard') }}" class="nav-item active">
+                        <i class="fa-solid fa-heart-pulse"></i>
+                        <span>Stay & Discharge</span>
+                    </a>
+                {% endif %}
+
+                <div class="nav-section-title">Communication</div>
+                <a href="{{ url_for('notifications.index') }}" class="nav-item {% if request.endpoint and 'notifications' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Notifications</span>
+                    {% if unread_notifications_count > 0 %}
+                    <span class="nav-badge">{{ unread_notifications_count }}</span>
+                    {% endif %}
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="avatar">{{ current_user.full_name[:2].upper() }}</div>
+                    <div class="user-info">
+                        <div class="user-name">{{ current_user.full_name }}</div>
+                        <div class="user-role">{{ current_user.role.title() }} {% if current_user.department %}• {{ current_user.department }}{% endif %}</div>
+                    </div>
+                    <a href="{{ url_for('auth.logout') }}" title="Logout" style="color: var(--text-light); margin-left: 6px;">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </a>
+                </div>
+            </div>
+        </aside>
+        {% endif %}
+
+        <!-- Main Workspace -->
+        <main class="app-main">
+            {% if current_user %}
+            <header class="app-topbar">
+                <div class="topbar-left">
+                    <h1 class="topbar-title">{% block page_title %}Discharge Portal{% endblock %}</h1>
+                </div>
+                <div class="topbar-right">
+                    <a href="{{ url_for('notifications.index') }}" class="notif-bell-btn" title="View Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                        <span id="navbar-notif-count" class="notif-badge-count" style="{% if unread_notifications_count == 0 %}display: none;{% endif %}">
+                            {{ unread_notifications_count }}
+                        </span>
+                    </a>
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline btn-sm">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+                    </a>
+                </div>
+            </header>
+            {% endif %}
+
+            <div class="app-content">
+                <!-- Alerts / Flash Messages -->
+                <div class="alerts-container">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">
+                                    <span>{{ message }}</span>
+                                    <button type="button" class="alert-close" style="background:none; border:none; cursor:pointer; font-size:16px;">&times;</button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                </div>
+
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

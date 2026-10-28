@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Hospital Billing - {{ admission.patient.full_name }}{% endblock %}
+{% block page_title %}Patient Account & Inpatient Billing Statement{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <div>
+            <h3>{{ admission.patient.full_name }} ({{ admission.patient.patient_id }})</h3>
+            <span style="font-size: 13px; color: var(--text-muted);">
+                Admission: <strong>{{ admission.admission_number }}</strong> • Room {{ admission.room.room_number }} ({{ admission.room.ward }}) • Rate: ${{ "%.2f"|format(admission.room.daily_rate) }}/day
+            </span>
+        </div>
+        <div>
+            <span class="badge {% if account.balance_due <= 0.01 and account.total_amount > 0 %}badge-completed{% elif account.paid_amount > 0 %}badge-pending{% else %}badge-neutral{% endif %}" style="font-size: 14px; padding: 6px 14px;">
+                {{ account.payment_status }}
+            </span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="metrics-grid" style="margin-bottom: 0;">
+            <div class="metric-card">
+                <span class="metric-title">Length of Stay</span>
+                <div class="metric-value">{{ admission.length_of_stay_days }} <span style="font-size: 16px; font-weight: normal;">days</span></div>
+                <div class="metric-subtext">From {{ admission.admission_date.strftime('%Y-%m-%d') }}</div>
+            </div>
+
+            <div class="metric-card">
+                <span class="metric-title">Gross Total Charges</span>
+                <div class="metric-value">${{ "%.2f"|format(account.total_amount) }}</div>
+                <div class="metric-subtext">Itemized services</div>
+            </div>
+
+            <div class="metric-card">
+                <span class="metric-title">Total Payments Received</span>
+                <div class="metric-value" style="color: var(--status-completed);">${{ "%.2f"|format(account.paid_amount) }}</div>
+                <div class="metric-subtext">Direct & insurance payments</div>
+            </div>
+
+            <div class="metric-card">
+                <span class="metric-title">Outstanding Balance Due</span>
+                <div class="metric-value" style="color: {% if account.balance_due > 0 %}var(--status-pending){% else %}var(--status-completed){% endif %};">
+                    ${{ "%.2f"|format(account.balance_due) }}
+                </div>
+                <div class="metric-subtext">Payable before checkout</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="display: flex; gap: 24px; flex-wrap: wrap;">
+    <!-- Left: Itemized Bill & Add Line Item -->
+    <div style="flex: 3; min-width: 480px;">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-file-invoice"></i> Itemized Hospital Charges</h3>
+            </div>
+            <div class="card-body" style="padding: 0;">
+                <div class="table-responsive">
+                    <table class="app-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Item Description</th>
+                                <th>Unit Price</th>
+                                <th>Qty</th>
+                                <th>Total</th>
+                                <th>Added By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for it in items %}
+                            <tr>
+                                <td>
+                                    <span class="badge badge-info">{{ it.category }}</span>
+                                </td>
+                                <td><strong>{{ it.description }}</strong></td>
+                                <td>${{ "%.2f"|format(it.unit_price) }}</td>
+                                <td>{{ it.quantity }}</td>
+                                <td><strong>${{ "%.2f"|format(it.total_price) }}</strong></td>
+                                <td style="font-size: 12px; color: var(--text-muted);">{{ it.added_by.full_name if it.added_by else 'System' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr style="background: #fafbfc;">
+                                <td colspan="4" style="text-align: right; font-weight: 600;">Subtotal:</td>
+                                <td colspan="2" style="font-weight: 700;">${{ "%.2f"|format(account.subtotal_amount) }}</td>
+                            </tr>
+                            {% if account.discount_amount > 0 %}
+                            <tr style="background: #fafbfc;">
+                                <td colspan="4" style="text-align: right; font-weight: 600; color: var(--status-completed);">Discount / Adjustment:</td>
+                                <td colspan="2" style="font-weight: 700; color: var(--status-completed);">- ${{ "%.2f"|format(account.discount_amount) }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr style="background: #f1f5f9; font-size: 15px;">
+                                <td colspan="4" style="text-align: right; font-weight: 700;">Net Total:</td>
+                                <td colspan="2" style="font-weight: 800;">${{ "%.2f"|format(account.total_amount) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {% if current_user.role == 'admin' and not account.is_finalized %}
+        <!-- Add Charge Item Form -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-plus-circle"></i> Add Charge Line Item</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('billing.add_item', admission_id=admission.id) }}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="category">Category *</label>
+                            <select id="category" name="category" class="form-select" required>
+                                <option value="Pharmacy">Pharmacy / Medication</option>
+                                <option value="Laboratory">Laboratory Investigation</option>
+                                <option value="Doctor Consultation">Specialist Physician Consultation</option>
+                                <option value="Nursing Care">Specialized Nursing Procedures</option>
+                                <option value="Other">Surgical / Facility Equipment</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="description">Description *</label>
+                            <input type="text" id="description" name="description" class="form-control" placeholder="e.g. ECG Analysis, Infusion pump" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="unit_price">Unit Price ($) *</label>
+                            <input type="number" step="0.01" id="unit_price" name="unit_price" class="form-control" placeholder="100.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="quantity">Quantity</label>
+                            <input type="number" step="1" id="quantity" name="quantity" class="form-control" value="1" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-outline btn-sm">
+                        <i class="fa-solid fa-plus"></i> Add Line Item to Bill
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Record Payment & Payment Receipts -->
+    <div style="flex: 2; min-width: 320px;">
+        {% if current_user.role == 'admin' and not account.is_finalized %}
+        <!-- Record Payment Form -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-credit-card"></i> Record Payment</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('billing.record_payment', admission_id=admission.id) }}">
+                    <div class="form-group">
+                        <label class="form-label" for="amount">Payment Amount ($) *</label>
+                        <input type="number" step="0.01" id="amount" name="amount" value="{{ account.balance_due }}" class="form-control" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="payment_method">Payment Method *</label>
+                            <select id="payment_method" name="payment_method" class="form-select" required>
+                                <option value="Insurance">Health Insurance Pre-Auth</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Debit Card">Debit Card</option>
+                                <option value="UPI / Online">UPI / Online Transfer</option>
+                                <option value="Cash">Cash Receipt</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="transaction_id">Txn / Approval ID</label>
+                            <input type="text" id="transaction_id" name="transaction_id" class="form-control" placeholder="e.g. POL-98129">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="notes">Payment Notes</label>
+                        <input type="text" id="notes" name="notes" class="form-control" placeholder="Payer notes, copay remarks...">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fa-solid fa-receipt"></i> Post Payment Receipt
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Apply Discount -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-tag"></i> Hospital Discount / Adjustment</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('billing.apply_discount', admission_id=admission.id) }}">
+                    <div class="form-group">
+                        <label class="form-label" for="discount_amount">Authorized Discount Amount ($)</label>
+                        <input type="number" step="0.01" id="discount_amount" name="discount_amount" value="{{ account.discount_amount }}" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-outline btn-sm">
+                        Apply Adjustment
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Payment History Ledger -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Payment Ledger ({{ payments|length }})</h3>
+            </div>
+            <div class="card-body" style="padding: 0;">
+                {% if payments %}
+                <div class="table-responsive">
+                    <table class="app-table" style="font-size: 13px;">
+                        <thead>
+                            <tr>
+                                <th>Receipt Ref</th>
+                                <th>Method</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in payments %}
+                            <tr>
+                                <td>
+                                    <strong>{{ p.payment_reference }}</strong>
+                                    {% if p.transaction_id %}
+                                    <div style="font-size: 11px; color: var(--text-muted);">{{ p.transaction_id }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ p.payment_method }}</td>
+                                <td style="color: var(--status-completed); font-weight: 700;">
+                                    ${{ "%.2f"|format(p.amount) }}
+                                </td>
+                                <td style="font-size: 11px; color: var(--text-light);">{{ p.created_at.strftime('%m/%d %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">
+                    No payment entries recorded yet.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

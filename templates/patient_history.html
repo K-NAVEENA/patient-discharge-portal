@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Admission History - {{ patient.full_name }}{% endblock %}
+{% block page_title %}Complete Admission & Discharge History: {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                {{ patient.full_name[:2].upper() }}
+            </div>
+            <div>
+                <h3>{{ patient.full_name }}</h3>
+                <span class="badge badge-info">{{ patient.patient_id }}</span>
+            </div>
+        </div>
+        <a href="{{ url_for('admin.view_patient', patient_id=patient.id) }}" class="btn btn-outline btn-sm">
+            &larr; Back to Patient Record
+        </a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if admissions %}
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Admission #</th>
+                        <th>Room Stayed</th>
+                        <th>Admitted Date</th>
+                        <th>Discharged Date</th>
+                        <th>Duration</th>
+                        <th>Attending Doctor</th>
+                        <th>Status</th>
+                        <th>Discharge Summary</th>
+                        <th>Billing Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for adm in admissions %}
+                    <tr>
+                        <td><strong>{{ adm.admission_number }}</strong></td>
+                        <td>Room {{ adm.room.room_number }} ({{ adm.room.ward }})</td>
+                        <td>{{ adm.admission_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if adm.discharge_date %}
+                                {{ adm.discharge_date.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                <span class="badge badge-info">Active Inpatient</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ adm.length_of_stay_days }} day(s)</td>
+                        <td>{{ adm.admitting_doctor.full_name }}</td>
+                        <td>
+                            <span class="badge {% if adm.status == 'Discharged' %}badge-neutral{% elif adm.status == 'Ready for Final Discharge' %}badge-completed{% else %}badge-pending{% endif %}">
+                                {{ adm.status }}
+                            </span>
+                        </td>
+                        <td style="max-width: 250px;">
+                            <div style="font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                {{ adm.discharge_summary or adm.admission_reason }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if adm.billing_account %}
+                                ${{ "%.2f"|format(adm.billing_account.total_amount) }}
+                                <div style="font-size: 11px; color: var(--text-muted);">
+                                    {{ adm.billing_account.payment_status }}
+                                </div>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 32px; text-align: center; color: var(--text-muted);">
+            <p>No admission records found for this patient.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
