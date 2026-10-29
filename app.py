@@ -17,6 +17,17 @@ def create_app(config_class=Config):
     # Initialize extensions
     db.init_app(app)
 
+    # Auto-initialize database tables and demo seed data on cloud/Render environments
+    if os.environ.get('RENDER'):
+        with app.app_context():
+            try:
+                db.create_all()
+                if not User.query.filter_by(username='admin').first():
+                    from database.seed import seed_database
+                    seed_database()
+            except Exception as e:
+                app.logger.warning(f"Cloud auto-init note: {e}")
+
     # Register Blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)

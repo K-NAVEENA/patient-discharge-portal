@@ -2,6 +2,11 @@
 
 A full-stack, database-backed hospital patient discharge coordination web application designed for healthcare facilities to streamline inpatient discharge planning, interdepartmental clearances (Nursing, Pharmacy, Diagnostic Laboratory), auditable clinical communication, patient financial statements, and post-discharge continuity of care.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/K-NAVEENA/patient-discharge-portal)
+
+- **Live URL on Render:** [https://patient-discharge-portal.onrender.com](https://patient-discharge-portal.onrender.com)
+- **1-Click Deploy on Render:** [Deploy to Render](https://render.com/deploy?repo=https://github.com/K-NAVEENA/patient-discharge-portal)
+
 ---
 
 ## 1. Technology Stack
